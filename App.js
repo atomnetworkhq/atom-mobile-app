@@ -9,6 +9,7 @@ import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import HomeScreen from './screens/HomeScreen';
 import ServiceDetailsScreen from './screens/ServiceDetailsScreen';
+import ImageGeneratorScreen from './screens/ImageGeneratorScreen';
 
 const RootStack = createStackNavigator();
 const AuthStack = createStackNavigator();
@@ -26,8 +27,10 @@ function AuthStackScreen() {
 function MainStackScreen() {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
+    {/* // <MainStack.Navigator screenOptions={{ headerShown: true }}> */}
       <MainStack.Screen name="Home" component={HomeScreen} />
       <MainStack.Screen name="ServiceDetails" component={ServiceDetailsScreen} />
+      <MainStack.Screen name="ImageGenerator" component={ImageGeneratorScreen} />
     </MainStack.Navigator>
   );
 }

@@ -1,18 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, SafeAreaView, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export default function ServiceDetailsScreen({ route }) {
+export default function ImageGeneratorScreen({ route }) {
   const { title } = route.params;
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [imageData, setImageData] = useState(null); // Step 1: Add state for image data
   const scrollViewRef = useRef();
   const ws = useRef(null);
-//   const [recognizing, setRecognizing] = useState(false);
-//   const [transcript, setTranscript] = useState("");
   useEffect(() => {
-
     connectWebSocket();
     return () => {
       if (ws.current) {
@@ -25,7 +23,7 @@ export default function ServiceDetailsScreen({ route }) {
   const connectWebSocket = async () => {
     const token = await AsyncStorage.getItem('userToken');
     
-    ws.current = new WebSocket('ws://atom.atomnetwork.xyz:8799', [], {
+    ws.current = new WebSocket('ws://atom.atomnetwork.xyz:9001', [], {
       headers: {
         "Authorization": `Bearer ${token}`
       }
@@ -36,11 +34,14 @@ export default function ServiceDetailsScreen({ route }) {
     };
 
     ws.current.onmessage = (e) => {
-      const response = JSON.parse(e.data);
-      console.log(response)
-      const formattedOutput = formatOutput(response.output_text);
-      setMessages(prevMessages => [...prevMessages, { id: Date.now(), text: formattedOutput, sender: 'bot' }]);
-      setIsLoading(false);
+      
+      const response = JSON.parse(e.data); 
+      if (response.image) { 
+        const message= { id: Date.now(), image: response.image, sender: 'bot' }
+        setMessages(prevMessages => [...prevMessages, message]);
+        setIsLoading(false);
+      }
+      
     };
 
     ws.current.onerror = (e) => {
@@ -66,7 +67,7 @@ export default function ServiceDetailsScreen({ route }) {
     setIsLoading(true);
 
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ text: inputText }));
+      ws.current.send(JSON.stringify({ prompt: inputText }));
     } else {
       console.error('WebSocket is not connected.');
       setIsLoading(false);
@@ -74,32 +75,7 @@ export default function ServiceDetailsScreen({ route }) {
 
     setInputText('');
   };
-//   useSpeechRecognitionEvent("start", () => setRecognizing(true));
-//   useSpeechRecognitionEvent("end", () => setRecognizing(false));
-//   useSpeechRecognitionEvent("result", (event) => {
-//     setTranscript(event.results[0]?.transcript);
-//   });
-//   useSpeechRecognitionEvent("error", (event) => {
-//     console.log("error code:", event.error, "error messsage:", event.message);
-//   });
 
-//   const handleStart = async () => {
-//     const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-//     if (!result.granted) {
-//       console.warn("Permissions not granted", result);
-//       return;
-//     }
-//     // Start speech recognition
-//     ExpoSpeechRecognitionModule.start({
-//       lang: "en-US",
-//       interimResults: true,
-//       maxAlternatives: 1,
-//       continuous: false,
-//       requiresOnDeviceRecognition: false,
-//       addsPunctuation: false,
-//       contextualStrings: ["Carlsen", "Nepomniachtchi", "Praggnanandhaa"],
-//     });
-//   };
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView 
@@ -114,19 +90,32 @@ export default function ServiceDetailsScreen({ route }) {
           ref={scrollViewRef}
           onContentSizeChange={() => scrollViewRef.current.scrollToEnd({ animated: true })}
         >
-          {messages.map(message => (
-            <View key={message.id} style={[
+          {messages.map(message => {
+            if(message.sender ==='bot'){
+              // console.log(message.image)
+              return <Image
+              source={{ uri: `data:image/png;base64,${message.image}` }} // Adjust the MIME type if necessary
+              style={{ width: 200, height: 200 }} // Changed width and height
+            />
+            }
+            else{
+
+            return <View key={message.id} style={[
               styles.messageBubble,
               message.sender === 'user' ? styles.userMessage : styles.botMessage
             ]}>
               <Text style={styles.messageText}>{message.text}</Text>
             </View>
-          ))}
+            }
+          }
+          )}
           {isLoading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color="#007AFF" />
             </View>
           )}
+          
+          
         </ScrollView>
         <View style={styles.inputContainer}>
           <TextInput
@@ -230,5 +219,11 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     marginVertical: 10,
+  },
+  image: {
+    width: '100%', // Adjust width as needed
+    height: 200, // Adjust height as needed
+    resizeMode: 'contain', // Adjust resize mode as needed
+    marginBottom: 20, // Add some margin if needed
   },
 });
